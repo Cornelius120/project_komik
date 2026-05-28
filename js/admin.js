@@ -200,3 +200,116 @@ async function handleProsesRilis() {
 }
 
 window.onload = checkAuth;
+
+// Kode ini diletakkan di js/admin.js (Tambahkan di paling bawah file)
+
+async function handleProsesBerita() {
+  const token = localStorage.getItem("admin_token");
+  const judul = document.getElementById("berita-title").value.trim();
+  const slug = document.getElementById("berita-slug").value.trim();
+  const ringkasan = document.getElementById("berita-summary").value.trim();
+  const imgbbKey = document.getElementById("imgbb-key").value.trim(); // Menggunakan input API Key yang sama dengan komik
+  const thumbnailFile = document.getElementById("berita-thumbnail").files[0];
+  const konten = document.getElementById("berita-content").value.trim();
+  const log = document.getElementById("status-log");
+  const progressDiv = document.getElementById("progress-container");
+
+  if (!judul || !slug || !ringkasan || !imgbbKey || !thumbnailFile || !konten) {
+    alert("Mohon lengkapi seluruh data berita dan gambar thumbnail!");
+    return;
+  }
+
+  progressDiv.style.display = "block";
+
+  try {
+    // 1. Upload Thumbnail Berita ke ImgBB
+    log.innerText = "⏳ Mengunggah gambar thumbnail ke ImgBB...";
+    const thumbnailUrl = await uploadKeImgBB(thumbnailFile, imgbbKey);
+
+    // 2. Simpan File Konten Berita Spesifik (Pecahan JSON: data/berita/slug.json)
+    const beritaPath = `data/berita/${slug}.json`;
+    log.innerText = `⏳ Memeriksa file berita di GitHub (${beritaPath})...`;
+
+    const existingBeritaFile = await fetchFromGitHub(beritaPath, token);
+    let beritaSha = existingBeritaFile ? existingBeritaFile.sha : null;
+
+    const beritaContentData = {
+      judul: judul,
+      tanggal: new Date().toLocaleDateString("id-ID", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      thumbnail: thumbnailUrl,
+      konten: konten,
+    };
+
+    log.innerText = "⏳ Mengirim file konten lengkap berita ke GitHub...";
+    await pushToGitHub(
+      beritaPath,
+      beritaContentData,
+      beritaSha,
+      `Publish Berita: ${judul}`,
+      token,
+    );
+
+    // 3. Update File Indeks Utama Daftar Berita (data/daftar-berita.json)
+    const indexPath = "data/daftar-berita.json";
+    log.innerText = "⏳ Sinkronisasi indeks utama daftar-berita.json...";
+
+    const existingIndexFile = await fetchFromGitHub(indexPath, token);
+    let indexSha = null;
+    let daftarBeritaData = [];
+
+    if (existingIndexFile) {
+      indexSha = existingIndexFile.sha;
+      daftarBeritaData = JSON.parse(atob(existingIndexFile.content));
+    }
+
+    // Cek apakah slug berita ini sudah ada sebelumnya (untuk kebutuhan edit/update)
+    const beritaIndex = daftarBeritaData.findIndex(
+      (item) => item.slug === slug,
+    );
+
+    const indeksBeritaBaru = {
+      id: Date.now(),
+      judul: judul,
+      slug: slug,
+      ringkasan: ringkasan,
+      thumbnail: thumbnailUrl,
+      tanggal: new Date().toLocaleDateString("id-ID", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+    };
+
+    if (beritaIndex !== -1) {
+      daftarBeritaData[beritaIndex] = indeksBeritaBaru; // Update jika sudah ada
+    } else {
+      daftarBeritaData.unshift(indeksBeritaBaru); // Tambahkan ke paling atas jika berita baru
+    }
+
+    log.innerText = "⏳ Menyimpan pembaruan indeks berita ke GitHub...";
+    await pushToGitHub(
+      indexPath,
+      daftarBeritaData,
+      indexSha,
+      `Update indeks berita: ${judul}`,
+      token,
+    );
+
+    log.innerText = "🎉 Sukses! Berita berhasil di-publish ke GitHub.";
+    alert(`Berita "${judul}" berhasil diterbitkan!`);
+
+    // Reset Form Berita
+    document.getElementById("berita-title").value = "";
+    document.getElementById("berita-slug").value = "";
+    document.getElementById("berita-summary").value = "";
+    document.getElementById("berita-thumbnail").value = "";
+    document.getElementById("berita-content").value = "";
+  } catch (error) {
+    log.innerText = `❌ Terjadi Kesalahan: ${error.message}`;
+    console.error(error);
+  }
+}
