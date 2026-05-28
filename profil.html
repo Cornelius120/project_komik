@@ -1,0 +1,86 @@
+<!-- Kode ini diletakkan di profil.html -->
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profil Saya - Miyamura Comic</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Miyamura Comic</h1>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="profil.html">Profil Saya</a>
+      </nav>
+    </header>
+
+    <main class="card">
+      <h2>Profil Pengunjung</h2>
+      <div id="profil-form">
+        <label for="username-display">Nama Panggilan:</label><br />
+        <input
+          type="text"
+          id="username-display"
+          placeholder="Masukkan nama kamu..."
+        /><br /><br />
+
+        <label for="theme-select">Tema Website:</label><br />
+        <select id="theme-select">
+          <option value="light">Terang</option>
+          <option value="dark">Gelap</option></select
+        ><br /><br />
+
+        <button onclick="simpanProfil()">Simpan Perubahan</button>
+      </div>
+
+      <hr />
+      <h3>Riwayat Bacaan Anda (Bookmark)</h3>
+      <div id="history-list">
+        <!-- Riwayat bacaan dari localStorage akan muncul di sini -->
+      </div>
+    </main>
+
+    <script>
+      // Kode ini diletakkan langsung di dalam file profil.html untuk kemudahan akses localStorage
+
+      // Fungsi untuk memuat data profil saat halaman dibuka
+      function muatProfil() {
+        const nama = localStorage.getItem("user_nama") || "Pengunjung Anonim";
+        const tema = localStorage.getItem("user_tema") || "light";
+
+        document.getElementById("username-display").value =
+          nama === "Pengunjung Anonim" ? "" : nama;
+        document.getElementById("theme-select").value = tema;
+
+        // Mengambil riwayat bacaan dari localStorage
+        const riwayat = JSON.parse(localStorage.getItem("user_history")) || [];
+        const historyContainer = document.getElementById("history-list");
+
+        if (riwayat.length === 0) {
+          historyContainer.innerHTML = "<p>Belum ada riwayat bacaan.</p>";
+        } else {
+          historyContainer.innerHTML =
+            "<ul>" +
+            riwayat.map((item) => `<li>${item}</li>`).join("") +
+            "</ul>";
+        }
+      }
+
+      // Fungsi untuk menyimpan data profil ke localStorage
+      function simpanProfil() {
+        const namaInput = document.getElementById("username-display").value;
+        const temaInput = document.getElementById("theme-select").value;
+
+        localStorage.setItem("user_nama", namaInput || "Pengunjung Anonim");
+        localStorage.setItem("user_tema", temaInput);
+
+        alert("Profil berhasil diperbarui di browser Anda!");
+        location.reload();
+      }
+
+      window.onload = muatProfil;
+    </script>
+  </body>
+</html>

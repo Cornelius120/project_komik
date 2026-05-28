@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Panel - Miyamura Comic</title>
+    <link rel="stylesheet" href="../css/style.css" />
+  </head>
+  <body>
+    <div class="admin-container">
+      <div id="login-section" class="card">
+        <h2>Login Admin</h2>
+        <p>
+          Masukkan GitHub Personal Access Token Anda untuk mengelola website.
+        </p>
+        <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx" />
+        <button onclick="loginAdmin()">Masuk Panel</button>
+      </div>
+
+      <div id="dashboard-section" class="card" style="display: none">
+        <h2>Panel Kendali Admin</h2>
+        <button onclick="logoutAdmin()" class="btn-danger">Keluar</button>
+        <hr />
+
+        <h3>Tambah Komik Baru</h3>
+        <input type="text" id="komik-title" placeholder="Judul Komik" />
+        <input
+          type="text"
+          id="komik-slug"
+          placeholder="slug-judul-komik (misal: solo-leveling)"
+        />
+
+        <h4>Upload Gambar Chapter (ImgBB)</h4>
+        <input type="text" id="imgbb-key" placeholder="API Key ImgBB Anda" />
+        <input type="file" id="chapter-images" multiple />
+
+        <button onclick="handleProsesKomik()">Simpan ke GitHub</button>
+        <p id="status-log"></p>
+      </div>
+    </div>
+
+    <script src="../js/admin.js"></script>
+  </body>
+</html>
