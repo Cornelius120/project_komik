@@ -1,17 +1,16 @@
 // Kode ini diletakkan di js/admin.js
 
-// Konfigurasi Repositori GitHub Kamu
-const GH_USER = "Cornelius120";
-const GH_REPO = "project_komik";
+// KELOLA CONFIG REPO DI SINI
+const GH_USER = "USERNAME_GITHUB_KAMU";
+const GH_REPO = "NAMA_REPO_GITHUB_KAMU";
 
-// Fungsi Login & Logout Admin via LocalStorage
 function loginAdmin() {
   const token = document.getElementById("gh-token").value;
   if (token) {
     localStorage.setItem("admin_token", token);
     checkAuth();
   } else {
-    alert("Token tidak boleh kosong!");
+    alert("Token wajib diisi!");
   }
 }
 
@@ -28,7 +27,7 @@ function checkAuth() {
   }
 }
 
-// Fungsi AJAX untuk Upload Gambar ke ImgBB
+// Fungsi AJAX mengunggah gambar tunggal ke ImgBB
 async function uploadKeImgBB(file, apiKey) {
   const formData = new FormData();
   formData.append("image", file);
@@ -38,94 +37,166 @@ async function uploadKeImgBB(file, apiKey) {
     body: formData,
   });
 
-  if (!response.ok) throw new Error("Gagal upload ke ImgBB");
+  if (!response.ok) throw new Error("Gagal mengunggah gambar ke ImgBB");
   const data = await response.json();
-  return data.data.url; // Mengembalikan URL gambar langsung
+  return data.data.url;
 }
 
-// Fungsi Utama untuk Memperbarui data/komik.json di GitHub
-async function handleProsesKomik() {
-  const token = localStorage.getItem("admin_token");
-  const judul = document.getElementById("komik-title").value;
-  const slug = document.getElementById("komik-slug").value;
-  const imgbbKey = document.getElementById("imgbb-key").value;
-  const files = document.getElementById("chapter-images").files;
-  const log = document.getElementById("status-log");
+// Helper untuk mengambil berkas dari GitHub (mendapatkan konten & SHA)
+async function fetchFromGitHub(path, token) {
+  const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${path}`;
+  const response = await fetch(url, {
+    headers: { Authorization: `token ${token}` },
+  });
+  if (response.status === 404) return null; // Berkas belum ada
+  if (!response.ok)
+    throw new Error(`Gagal mengambil berkas ${path} dari GitHub`);
+  return await response.json();
+}
 
-  if (!judul || !slug || !imgbbKey || files.length === 0) {
-    alert("Mohon isi semua data dan pilih gambar!");
+// Helper untuk mengirim/memperbarui berkas di GitHub
+async function pushToGitHub(path, contentObj, sha, commitMessage, token) {
+  const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${path}`;
+  const contentBase64 = btoa(
+    unescape(encodeURIComponent(JSON.stringify(contentObj, null, 2))),
+  );
+
+  const bodyData = {
+    message: commitMessage,
+    content: contentBase64,
+  };
+  if (sha) bodyData.sha = sha; // Menyertakan SHA jika memperbarui berkas lama
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      Authorization: `token ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(bodyData),
+  });
+
+  if (!response.ok) throw new Error(`Gagal menyimpan berkas ${path} ke GitHub`);
+  return await response.json();
+}
+
+// Fungsi Eksekusi Utama Rilis Komik & Pemecahan JSON
+async function handleProsesRilis() {
+  const token = localStorage.getItem("admin_token");
+  const judul = document.getElementById("komik-title").value.trim();
+  const slug = document.getElementById("komik-slug").value.trim();
+  const imgbbKey = document.getElementById("imgbb-key").value.trim();
+  const coverFile = document.getElementById("komik-cover").files[0];
+  const chNumber = parseInt(document.getElementById("chapter-number").value);
+  const chapterFiles = document.getElementById("chapter-images").files;
+  const log = document.getElementById("status-log");
+  const progressDiv = document.getElementById("progress-container");
+
+  if (!judul || !slug || !imgbbKey || !chNumber || chapterFiles.length === 0) {
+    alert("Mohon lengkapi seluruh data utama dan gambar chapter!");
     return;
   }
 
+  progressDiv.style.display = "block";
+
   try {
-    log.innerText = "Mengunggah gambar ke ImgBB...";
-    let urlGambarArray = [];
-    for (let file of files) {
-      const url = await uploadKeImgBB(file, imgbbKey);
-      urlGambarArray.push(url);
+    let coverUrl = "";
+
+    // 1. Upload Cover jika diunggah (untuk komik baru)
+    if (coverFile) {
+      log.innerText = "⏳ Sedang mengunggah gambar cover ke ImgBB...";
+      coverUrl = await uploadKeImgBB(coverFile, imgbbKey);
     }
 
-    log.innerText = "Mengambil data komik lama dari GitHub...";
-    const filePath = "data/komik.json";
-    const urlGet = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${filePath}`;
-
-    // 1. Ambil file lama untuk mendapatkan SHA (Wajib di GitHub API)
-    const resGet = await fetch(urlGet, {
-      headers: { Authorization: `token ${token}` },
-    });
-
-    let currentData = [];
-    let sha = "";
-
-    if (resGet.ok) {
-      const fileData = await resGet.json();
-      sha = fileData.sha;
-      // Decode base64 dari GitHub ke teks biasa, lalu parse ke JSON
-      currentData = JSON.parse(atob(fileData.content));
+    // 2. Upload Seluruh Gambar Isi Chapter secara Bergantian (AJAX)
+    log.innerText = `⏳ Mengunggah 0/${chapterFiles.length} Gambar Chapter ke ImgBB...`;
+    let isiHalamanUrls = [];
+    for (let i = 0; i < chapterFiles.length; i++) {
+      log.innerText = `⏳ Mengunggah Gambar Ke-${i + 1}/${chapterFiles.length} ke ImgBB...`;
+      const urlImg = await uploadKeImgBB(chapterFiles[i], imgbbKey);
+      isiHalamanUrls.push(urlImg);
     }
 
-    // 2. Gabungkan data komik baru ke data lama
-    const komikBaru = {
-      id: Date.now(),
-      judul: judul,
-      slug: slug,
-      images: urlGambarArray,
+    // 3. Simpan File JSON Chapter Spesifik (Pecahan: /data/manga/slug/chX.json)
+    const chapterPath = `data/manga/${slug}/ch${chNumber}.json`;
+    log.innerText = `⏳ Memeriksa riwayat berkas chapter di GitHub (${chapterPath})...`;
+
+    const existingChapterFile = await fetchFromGitHub(chapterPath, token);
+    let chapterSha = existingChapterFile ? existingChapterFile.sha : null;
+
+    const chapterDataContent = {
+      chapter: chNumber,
+      images: isiHalamanUrls,
       diupdateAt: new Date().toISOString(),
     };
-    currentData.push(komikBaru);
 
-    log.innerText = "Menyimpan data terbaru ke GitHub...";
-    // Encode kembali data JSON ke Base64
-    const contentBase64 = btoa(
-      unescape(encodeURIComponent(JSON.stringify(currentData, null, 2))),
+    log.innerText = `⏳ Mengirim file pecahan chapter ke GitHub...`;
+    await pushToGitHub(
+      chapterPath,
+      chapterDataContent,
+      chapterSha,
+      `Rilis ${judul} Ch ${chNumber}`,
+      token,
     );
 
-    // 3. Kirim data baru (PUT) ke GitHub
-    const resPut = await fetch(urlGet, {
-      method: "PUT",
-      headers: {
-        Authorization: `token ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        message: `Tambah komik baru: ${judul}`,
-        content: contentBase64,
-        sha: sha, // Masukkan SHA file lama agar tidak error conflict
-      }),
-    });
+    // 4. Update File Indeks Utama (data/daftar-komik.json)
+    const indexPath = "data/daftar-komik.json";
+    log.innerText = "⏳ Sinkronisasi data utama daftar-komik.json...";
 
-    if (resPut.ok) {
-      log.innerText =
-        "Sukses! Data tersimpan di GitHub. Vercel/Netlify sedang melakukan build ulang.";
-      alert("Komik berhasil ditambahkan!");
-    } else {
-      throw new Error("Gagal push ke GitHub API");
+    const existingIndexFile = await fetchFromGitHub(indexPath, token);
+    let indexSha = null;
+    let daftarKomikData = [];
+
+    if (existingIndexFile) {
+      indexSha = existingIndexFile.sha;
+      daftarKomikData = JSON.parse(atob(existingIndexFile.content));
     }
+
+    // Cek apakah komik ini sudah terdaftar di index utama
+    const komikIndex = daftarKomikData.findIndex((item) => item.slug === slug);
+
+    if (komikIndex !== -1) {
+      // Jika sudah ada, perbarui informasi chapter terakhirnya
+      if (chNumber > daftarKomikData[komikIndex].chapter_terakhir) {
+        daftarKomikData[komikIndex].chapter_terakhir = chNumber;
+      }
+      if (coverUrl) {
+        daftarKomikData[komikIndex].cover = coverUrl; // Update cover jika ada file baru
+      }
+      daftarKomikData[komikIndex].diupdateAt = new Date().toISOString();
+    } else {
+      // Jika komik baru, tambahkan objek baru ke array
+      const komikBaru = {
+        id: Date.now(),
+        judul: judul,
+        slug: slug,
+        cover: coverUrl || "https://via.placeholder.com/200x300?text=No+Cover",
+        chapter_terakhir: chNumber,
+        diupdateAt: new Date().toISOString(),
+      };
+      daftarKomikData.push(komikBaru);
+    }
+
+    log.innerText = "⏳ Menyimpan pembaruan indeks utama ke GitHub...";
+    await pushToGitHub(
+      indexPath,
+      daftarKomikData,
+      indexSha,
+      `Update indeks komik: ${judul} Ch ${chNumber}`,
+      token,
+    );
+
+    log.innerText =
+      "🎉 Sukses! Data berhasil dipush. Vercel/Netlify akan otomatis memperbarui situs dalam 1-2 menit.";
+    alert(`Chapter ${chNumber} berhasil dirilis!`);
+
+    // Reset Form kontainer chapter setelah sukses
+    document.getElementById("chapter-number").value = "";
+    document.getElementById("chapter-images").value = "";
   } catch (error) {
-    log.innerText = `Error: ${error.message}`;
+    log.innerText = `❌ Terjadi Kesalahan: ${error.message}`;
     console.error(error);
   }
 }
 
-// Jalankan pengecekan login saat halaman dimuat
 window.onload = checkAuth;

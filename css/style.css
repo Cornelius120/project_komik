@@ -1,0 +1,112 @@
+/* Kode ini diletakkan di css/style.css */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #fafafa;
+    color: #333;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Penerapan deteksi tema malam berdasarkan konfigurasi di profil.html */
+body.dark-theme {
+    background-color: #121212;
+    color: #f5f5f5;
+}
+
+header {
+    background-color: #0076ff;
+    color: white;
+    padding: 15px;
+    text-align: center;
+}
+
+header nav a {
+    color: white;
+    margin: 0 10px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.card {
+    background: white;
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-theme .card {
+    background: #1e1e1e;
+    color: #fff;
+}
+
+.form-group {
+    margin-bottom: 12px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+/* Gaya Khusus Area Baca Komik (Stacking Gambar Kebawah) */
+.reader-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 10px;
+}
+
+.reader-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #eee;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+body.dark-theme .reader-nav {
+    background: #2a2a2a;
+}
+
+.images-stack {
+    text-align: center;
+    background: #000;
+    padding: 10px 0;
+}
+
+.comic-page {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto 5px auto;
+    /* Memberi jarak tipis antar halaman komik */
+}
+
+button {
+    cursor: pointer;
+    padding: 8px 15px;
+    border: none;
+    background: #0076ff;
+    color: white;
+    border-radius: 4px;
+}
+
+button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.btn-danger {
+    background: #ff3b30;
+}

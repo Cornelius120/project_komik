@@ -30,5 +30,10 @@ async function muatDaftarKomik() {
   }
 }
 
+// Tambahkan baris pengecekan tema ini di awal file JS halaman publik
+if (localStorage.getItem("user_tema") === "dark") {
+  document.body.classList.add("dark-theme");
+}
+
 // Jalankan fungsi saat halaman dibuka
 window.onload = muatDaftarKomik;

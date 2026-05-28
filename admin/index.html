@@ -18,24 +18,75 @@
       </div>
 
       <div id="dashboard-section" class="card" style="display: none">
-        <h2>Panel Kendali Admin</h2>
-        <button onclick="logoutAdmin()" class="btn-danger">Keluar</button>
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
+          <h2>Panel Kendali Admin</h2>
+          <button onclick="logoutAdmin()" class="btn-danger">Keluar</button>
+        </div>
         <hr />
 
-        <h3>Tambah Komik Baru</h3>
-        <input type="text" id="komik-title" placeholder="Judul Komik" />
-        <input
-          type="text"
-          id="komik-slug"
-          placeholder="slug-judul-komik (misal: solo-leveling)"
-        />
+        <h3>Input / Update Komik & Chapter Baru</h3>
+        <div class="form-group">
+          <label>Judul Komik:</label>
+          <input
+            type="text"
+            id="komik-title"
+            placeholder="Contoh: Solo Leveling"
+          />
+        </div>
+        <div class="form-group">
+          <label>Slug Komik (URL Folder):</label>
+          <input
+            type="text"
+            id="komik-slug"
+            placeholder="Contoh: solo-leveling"
+          />
+        </div>
+        <div class="form-group">
+          <label>API Key ImgBB:</label>
+          <input
+            type="text"
+            id="imgbb-key"
+            placeholder="Masukkan API Key ImgBB"
+          />
+        </div>
+        <div class="form-group">
+          <label>Upload Gambar Cover (Hanya jika Komik Baru):</label>
+          <input type="file" id="komik-cover" />
+        </div>
 
-        <h4>Upload Gambar Chapter (ImgBB)</h4>
-        <input type="text" id="imgbb-key" placeholder="API Key ImgBB Anda" />
-        <input type="file" id="chapter-images" multiple />
+        <hr />
+        <h4>Bagian Rilis Chapter</h4>
+        <div class="form-group">
+          <label>Nomor Chapter:</label>
+          <input
+            type="number"
+            id="chapter-number"
+            placeholder="Contoh: 1"
+            min="1"
+          />
+        </div>
+        <div class="form-group">
+          <label>Pilih Gambar Isi Chapter (Bisa pilih banyak sekaligus):</label>
+          <input type="file" id="chapter-images" multiple />
+        </div>
 
-        <button onclick="handleProsesKomik()">Simpan ke GitHub</button>
-        <p id="status-log"></p>
+        <button
+          onclick="handleProsesRilis()"
+          class="btn-primary"
+          style="width: 100%; padding: 12px; margin-top: 15px"
+        >
+          Proses & Amankan ke GitHub API
+        </button>
+
+        <div id="progress-container" style="margin-top: 15px; display: none">
+          <p id="status-log" style="font-weight: bold; color: #0076ff"></p>
+        </div>
       </div>
     </div>
 
